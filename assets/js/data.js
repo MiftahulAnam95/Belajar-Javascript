@@ -1666,6 +1666,112 @@ document.querySelector("#toggle").addEventListener("click", function () {
       { id: "recall-3", title: "Recall Aktif", icon: "bi-arrow-repeat" },
       { id: "debug-3", title: "Bug JS Reader", icon: "bi-bug" },
       { id: "konsisten", title: "Konsisten", icon: "bi-lightning-charge" }
+    ],
+    learningPhases: [
+      {
+        id: "fondasi-script",
+        icon: "bi-compass",
+        label: "Materi 01-04",
+        title: "Kenali Peran JavaScript",
+        description: "Pahami JavaScript sebagai lapisan perilaku, hubungkan file script, baca console, lalu simpan nilai dengan let dan const.",
+        outcome: "Kamu tahu kenapa tombol bisa bereaksi dan bagaimana file JavaScript mulai bekerja di browser.",
+        lessonStart: 0,
+        lessonEnd: 3
+      },
+      {
+        id: "logika-dasar",
+        icon: "bi-diagram-3",
+        label: "Materi 05-10",
+        title: "Logika Dasar Program",
+        description: "Latih tipe data, operator, kondisi, fungsi, array, loop, dan object dengan contoh kecil yang mudah dibaca.",
+        outcome: "Kamu bisa membuat keputusan, mengulang data, dan mengelompokkan langkah sederhana dalam kode.",
+        lessonStart: 4,
+        lessonEnd: 9
+      },
+      {
+        id: "dom-event",
+        icon: "bi-hand-index-thumb",
+        label: "Materi 11-15",
+        title: "DOM, Event, dan Teks Dinamis",
+        description: "Belajar memilih elemen, mengubah teks/class, merespons klik atau input, memvalidasi form, dan membuat template kalimat.",
+        outcome: "Kamu bisa membuat halaman HTML/CSS berubah karena aksi pengguna.",
+        lessonStart: 10,
+        lessonEnd: 14
+      },
+      {
+        id: "data-project",
+        icon: "bi-rocket-takeoff",
+        label: "Materi 16-20",
+        title: "Data, Debugging, dan Project",
+        description: "Pakai localStorage, fetch JSON, baca error, rapikan struktur project, lalu siapkan project JavaScript untuk dipublish.",
+        outcome: "Kamu siap membuat mini project interaktif dan memperbaiki bug dasar secara berurutan.",
+        lessonStart: 15,
+        lessonEnd: 19
+      }
+    ],
+    starterFlow: [
+      {
+        icon: "bi-cursor",
+        title: "Pilih satu elemen",
+        description: "Mulai dari querySelector agar jelas bagian HTML mana yang sedang dikendalikan JavaScript."
+      },
+      {
+        icon: "bi-hand-index-thumb",
+        title: "Tunggu satu aksi",
+        description: "Pasang event seperti click atau input. Satu aksi dulu sebelum menambah logika lain."
+      },
+      {
+        icon: "bi-arrow-repeat",
+        title: "Lihat perubahan",
+        description: "Ubah textContent, classList, value, atau daftar item, lalu cek hasilnya langsung di preview."
+      },
+      {
+        icon: "bi-bug",
+        title: "Debug pelan-pelan",
+        description: "Baca error pertama di Console, cek selector, cek urutan script, lalu perbaiki satu hal."
+      }
+    ],
+    homeDemos: [
+      {
+        id: "teks",
+        label: "Teks",
+        title: "Mengubah teks saat tombol diklik",
+        html: "<h1>Halo JavaScript</h1>\n<p id=\"pesan\">Klik tombol untuk melihat perubahan.</p>\n<button id=\"tombol\">Klik saya</button>",
+        css: "body {\n  font-family: Arial, sans-serif;\n}\n\nbutton {\n  background: #f59e0b;\n  border: 0;\n  border-radius: 8px;\n  color: #111827;\n  font-weight: bold;\n  padding: 10px 14px;\n}",
+        js: "const tombol = document.querySelector(\"#tombol\");\nconst pesan = document.querySelector(\"#pesan\");\n\ntombol.addEventListener(\"click\", function () {\n  pesan.textContent = \"Teks berubah karena JavaScript.\";\n});",
+        explanation: "querySelector memilih tombol dan paragraf. addEventListener menunggu klik, lalu textContent mengganti isi paragraf.",
+        task: "Ganti kalimat di textContent dengan kalimatmu sendiri, lalu klik tombolnya."
+      },
+      {
+        id: "counter",
+        label: "Counter",
+        title: "Menyimpan angka yang berubah",
+        html: "<h1>Counter</h1>\n<p>Jumlah klik: <strong id=\"angka\">0</strong></p>\n<button id=\"tambah\">Tambah</button>",
+        css: "strong {\n  color: #b45309;\n  font-size: 32px;\n}\n\nbutton {\n  padding: 10px 14px;\n}",
+        js: "const angka = document.querySelector(\"#angka\");\nconst tambah = document.querySelector(\"#tambah\");\nlet jumlah = 0;\n\ntambah.addEventListener(\"click\", function () {\n  jumlah = jumlah + 1;\n  angka.textContent = jumlah;\n});",
+        explanation: "let dipakai untuk nilai yang berubah. Setiap klik menambah jumlah, lalu angka di halaman diperbarui.",
+        task: "Ubah penambahan menjadi +2, lalu lihat angka naik lebih cepat."
+      },
+      {
+        id: "input",
+        label: "Input",
+        title: "Menampilkan hasil ketikan langsung",
+        html: "<label for=\"nama\">Nama</label>\n<input id=\"nama\" placeholder=\"Ketik nama\">\n<p id=\"preview\">Halo, ...</p>",
+        css: "input {\n  border: 1px solid #cbd5e1;\n  border-radius: 8px;\n  display: block;\n  margin: 8px 0 14px;\n  padding: 10px;\n}",
+        js: "const input = document.querySelector(\"#nama\");\nconst preview = document.querySelector(\"#preview\");\n\ninput.addEventListener(\"input\", function () {\n  preview.textContent = \"Halo, \" + (input.value || \"...\");\n});",
+        explanation: "Event input berjalan setiap kali pengguna mengetik. JavaScript membaca value lalu menampilkannya ke paragraf.",
+        task: "Ubah kata Halo menjadi Selamat datang, lalu ketik namamu."
+      },
+      {
+        id: "class",
+        label: "Class",
+        title: "Mengganti tampilan dengan classList",
+        html: "<article id=\"kartu\" class=\"card\">\n  <h1>Mode terang</h1>\n  <button id=\"toggle\">Ganti tema</button>\n</article>",
+        css: ".card {\n  background: #fffbeb;\n  border: 1px solid #fde68a;\n  border-radius: 12px;\n  padding: 18px;\n}\n\n.gelap {\n  background: #111827;\n  color: #fef3c7;\n}",
+        js: "const kartu = document.querySelector(\"#kartu\");\nconst judul = document.querySelector(\"h1\");\n\ndocument.querySelector(\"#toggle\").addEventListener(\"click\", function () {\n  kartu.classList.toggle(\"gelap\");\n  judul.textContent = kartu.classList.contains(\"gelap\") ? \"Mode gelap\" : \"Mode terang\";\n});",
+        explanation: "classList.toggle menambah atau menghapus class. CSS menentukan tampilan saat class gelap aktif.",
+        task: "Ganti warna background class gelap, lalu klik tombolnya."
+      }
     ]
   };
 })();

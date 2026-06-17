@@ -72,7 +72,7 @@
         <div class="container">
           <div class="d-flex flex-column flex-lg-row justify-content-between gap-2">
             <span>JavaScript Beginner Lab - project belajar JavaScript interaktif setelah HTML dan CSS.</span>
-            <span>Style belajar terinspirasi dari <a href="https://miftahulanam95.github.io/Belajar-HTML/" target="_blank" rel="noopener noreferrer">Belajar HTML</a> dan <a href="https://miftahulanam95.github.io/Belajar-Laravel/" target="_blank" rel="noopener noreferrer">Belajar Laravel</a></span>
+            <span>Dibuat untuk membantu pemula memahami JavaScript langkah demi langkah.</span>
           </div>
         </div>
       </footer>`;
