@@ -4,13 +4,16 @@ window.JSLabApp = (() => {
   let currentQuiz = { index: 0, score: 0, answered: false, recorded: false };
   let activeRecallId = data.recallChallenges[0].id;
   let activeDebugId = data.debugChallenges[0].id;
-  const debugAttempts = {};
   const LESSON_RECALL_STORAGE_KEY = "javascript-beginner-lab-lesson-recall-v1";
+  const RECALL_STORAGE_KEY = "javascript-beginner-lab-recall-answers-v1";
+  const DEBUG_ATTEMPT_STORAGE_KEY = "javascript-beginner-lab-debug-attempts-v1";
   const rootPath = document.body.dataset.root || "";
   let toastInstance;
   let editorColorPicker;
   let editorTagSuggest;
   let editorUndoHistory;
+  let activeEditorDebugId = "";
+  let activeEditorDebugJsOnly = false;
 
   const getElement = (id) => document.getElementById(id);
 
@@ -35,7 +38,44 @@ window.JSLabApp = (() => {
     }
   };
 
+  const loadRecallChallengeAnswers = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(RECALL_STORAGE_KEY) || "{}");
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+      return Object.fromEntries(
+        Object.entries(saved).filter(([id, answer]) => data.recallChallenges.some((challenge) => challenge.id === id) && typeof answer === "string")
+      );
+    } catch (error) {
+      console.warn("Jawaban recall challenge tidak dapat dibaca.", error);
+      return {};
+    }
+  };
+
+  const loadDebugAttempts = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DEBUG_ATTEMPT_STORAGE_KEY) || "{}");
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+      return Object.fromEntries(
+        Object.entries(saved)
+          .filter(([id, attempt]) => data.debugChallenges.some((challenge) => challenge.id === id) && attempt && typeof attempt === "object")
+          .map(([id, attempt]) => [
+            id,
+            {
+              analysis: typeof attempt.analysis === "string" ? attempt.analysis : "",
+              code: typeof attempt.code === "string" ? attempt.code : "",
+              submitted: attempt.submitted === true
+            }
+          ])
+      );
+    } catch (error) {
+      console.warn("Jawaban debugging tidak dapat dibaca.", error);
+      return {};
+    }
+  };
+
   const lessonRecallAnswers = loadLessonRecallAnswers();
+  const recallChallengeAnswers = loadRecallChallengeAnswers();
+  const debugAttempts = loadDebugAttempts();
 
   const saveLessonRecallAnswers = () => {
     try {
@@ -43,6 +83,26 @@ window.JSLabApp = (() => {
       return true;
     } catch (error) {
       console.warn("Jawaban recall materi tidak dapat disimpan.", error);
+      return false;
+    }
+  };
+
+  const saveRecallChallengeAnswers = () => {
+    try {
+      localStorage.setItem(RECALL_STORAGE_KEY, JSON.stringify(recallChallengeAnswers));
+      return true;
+    } catch (error) {
+      console.warn("Jawaban recall challenge tidak dapat disimpan.", error);
+      return false;
+    }
+  };
+
+  const saveDebugAttempts = () => {
+    try {
+      localStorage.setItem(DEBUG_ATTEMPT_STORAGE_KEY, JSON.stringify(debugAttempts));
+      return true;
+    } catch (error) {
+      console.warn("Jawaban debugging tidak dapat disimpan.", error);
       return false;
     }
   };
@@ -196,6 +256,94 @@ window.JSLabApp = (() => {
   </head>
   <body>${code}${scriptBlock}</body>
 </html>`;
+  };
+
+  const debugPreviewHtml = `<main class="card" id="app">
+  <h1>Preview Debugging JavaScript</h1>
+  <p id="pesan">Klik tombol atau isi form untuk melihat efek script.</p>
+  <button id="tombol">Klik tombol</button>
+  <form id="form" class="debug-form">
+    <label for="nama">Nama</label>
+    <input id="nama" placeholder="Rina">
+    <label for="inputA">Angka A</label>
+    <input id="inputA" value="2">
+    <label for="inputB">Angka B</label>
+    <input id="inputB" value="3">
+    <button type="submit">Cek form</button>
+  </form>
+  <p id="hasil"></p>
+</main>`;
+
+  const debugPreviewCss = `body {
+  background: #fffbeb;
+  font-family: Arial, sans-serif;
+}
+
+.card {
+  background: white;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  max-width: 520px;
+  padding: 20px;
+}
+
+.aktif {
+  color: #b45309;
+  font-weight: bold;
+}
+
+input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  display: block;
+  margin: 6px 0 10px;
+  padding: 8px;
+}`;
+
+  const getDebugPreviewParts = (code = "") => {
+    const source = String(code || "").trim();
+    if (!source) return { css: debugPreviewCss, html: debugPreviewHtml, js: "", jsOnly: true };
+    const hasHtml = /<\/?[a-z][\s\S]*?>/i.test(source);
+    if (hasHtml) return { css: "", html: source, js: "", jsOnly: false };
+    return { css: debugPreviewCss, html: debugPreviewHtml, js: source, jsOnly: true };
+  };
+
+  const getDebugAttempt = (id, fallbackCode = "") => {
+    const saved = debugAttempts[id] || {};
+    return {
+      analysis: typeof saved.analysis === "string" ? saved.analysis : "",
+      code: typeof saved.code === "string" && saved.code ? saved.code : fallbackCode,
+      submitted: saved.submitted === true
+    };
+  };
+
+  const setRecallChallengeAnswer = (id, answer = "") => {
+    if (!data.recallChallenges.some((challenge) => challenge.id === id)) return false;
+    if (answer.trim()) recallChallengeAnswers[id] = answer;
+    else delete recallChallengeAnswers[id];
+    return saveRecallChallengeAnswers();
+  };
+
+  const saveActiveRecallAnswer = (id) => {
+    const input = getElement("recallAnswerInput");
+    if (!input) return true;
+    return setRecallChallengeAnswer(id, input.value);
+  };
+
+  const runDebugAnswerPreview = () => {
+    const codeInput = getElement("debugCode");
+    const previewFrame = getElement("debugPreviewFrame");
+    if (!codeInput || !previewFrame) return;
+    const parts = getDebugPreviewParts(codeInput.value);
+    previewFrame.srcdoc = buildPreviewDocument(parts.html, parts.css, parts.js);
+  };
+
+  const initDebugCodeEditor = () => {
+    const codeInput = getElement("debugCode");
+    if (!codeInput) return;
+    initEditorTabBehavior([codeInput], runDebugAnswerPreview);
+    initEditorUndoHistory([codeInput], runDebugAnswerPreview);
+    runDebugAnswerPreview();
   };
 
   const renderLessonCodePreview = (item) => `
@@ -713,12 +861,15 @@ window.JSLabApp = (() => {
       .join("");
 
     const item = data.recallChallenges.find((challenge) => challenge.id === id) || data.recallChallenges[0];
+    const savedAnswer = recallChallengeAnswers[item.id] || "";
     detail.innerHTML = `
       <span class="eyebrow"><i class="bi ${item.icon}"></i> Recall challenge</span>
       <h2>${escapeHTML(item.title)}</h2>
       <p>${escapeHTML(item.question)}</p>
-      <textarea class="recall-input" placeholder="Jawab dulu dengan bahasa sendiri..."></textarea>
+      <label class="debug-field-label" for="recallAnswerInput">Jawabanmu</label>
+      <textarea class="recall-input" id="recallAnswerInput" data-recall-answer="${item.id}" placeholder="Jawab dulu dengan bahasa sendiri...">${escapeHTML(savedAnswer)}</textarea>
       <div class="lesson-actions mt-3">
+        <button class="btn btn-soft" type="button" data-save-recall="${item.id}"><i class="bi bi-floppy"></i> Simpan jawaban</button>
         <button class="btn btn-soft" type="button" data-show-recall-answer><i class="bi bi-eye"></i> Lihat pembahasan</button>
         <button class="btn btn-primary" type="button" data-complete-recall="${item.id}">
           <i class="bi bi-check2-circle"></i> ${completed.includes(item.id) ? "Sudah selesai" : "Tandai selesai"}
@@ -746,7 +897,7 @@ window.JSLabApp = (() => {
       .join("");
 
     const item = data.debugChallenges.find((challenge) => challenge.id === id) || data.debugChallenges[0];
-    const attempt = debugAttempts[id] || { analysis: "", code: "", submitted: false };
+    const attempt = getDebugAttempt(item.id, item.brokenCode);
     detail.innerHTML = `
       <span class="eyebrow"><i class="bi bi-bug"></i> Debugging JavaScript</span>
       <h2>${escapeHTML(item.title)}</h2>
@@ -759,11 +910,28 @@ window.JSLabApp = (() => {
       <form class="mt-3" data-debug-form="${item.id}">
         <label class="debug-field-label" for="debugAnalysis">Apa penyebab bug ini?</label>
         <textarea class="debug-analysis-input" id="debugAnalysis" name="analysis" required>${escapeHTML(attempt.analysis)}</textarea>
-        <label class="debug-field-label mt-3" for="debugCode">Coba tulis kode perbaikannya.</label>
-        <textarea class="debug-code-input" id="debugCode" name="code" required>${escapeHTML(attempt.code)}</textarea>
+        <div class="debug-editor-grid mt-3">
+          <div>
+            <label class="debug-field-label" for="debugCode">Coba tulis kode perbaikannya.</label>
+            <div class="debug-editor-wrap">
+              <textarea class="debug-code-input code-input" id="debugCode" name="code" spellcheck="false" required>${escapeHTML(attempt.code)}</textarea>
+            </div>
+          </div>
+          <div class="debug-preview-shell">
+            <div class="preview-head">
+              <span><i class="bi bi-browser-chrome"></i> Preview jawaban</span>
+            </div>
+            <iframe class="debug-preview-frame" id="debugPreviewFrame" title="Preview jawaban debugging ${escapeHTML(item.title)}" sandbox="allow-scripts"></iframe>
+          </div>
+        </div>
         <div class="lesson-actions mt-3">
           <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Submit jawaban</button>
+          <button class="btn btn-soft" type="button" data-run-debug-preview><i class="bi bi-play-fill"></i> Preview kode</button>
+          <button class="btn btn-soft" type="button" data-reset-debug-code="${item.id}"><i class="bi bi-arrow-counterclockwise"></i> Reset kode</button>
           <button class="btn btn-soft" type="button" data-show-debug-hint><i class="bi bi-lightbulb"></i> Lihat hint</button>
+          <a class="btn btn-soft" href="${rootPath}editor.html?debug=${encodeURIComponent(item.id)}" target="_blank" rel="noopener noreferrer">
+            <i class="bi bi-code-square"></i> Buka editor
+          </a>
         </div>
       </form>
       <div class="hint-box mt-3 d-none" id="debugHint">
@@ -780,6 +948,7 @@ window.JSLabApp = (() => {
           <i class="bi bi-check2-circle"></i> ${completed.includes(item.id) ? "Sudah selesai" : "Tandai selesai"}
         </button>
       </div>`;
+    initDebugCodeEditor();
   };
 
   const renderProjectExample = (example, projectIndex = 0) => {
@@ -1908,12 +2077,65 @@ window.JSLabApp = (() => {
     };
   };
 
+  const getEditorDebugChallenge = () => {
+    const debugId = new URLSearchParams(window.location.search).get("debug");
+    return data.debugChallenges.find((item) => item.id === debugId) || null;
+  };
+
+  const setEditorDebugChallenge = (id) => {
+    const challenge = data.debugChallenges.find((item) => item.id === id);
+    const htmlInput = getElement("htmlInput");
+    const cssInput = getElement("cssInput");
+    const jsInput = getElement("jsInput");
+    if (!challenge || !htmlInput || !cssInput || !jsInput) return;
+
+    const attempt = getDebugAttempt(challenge.id, challenge.brokenCode);
+    const parts = getDebugPreviewParts(attempt.code);
+    activeEditorDebugId = challenge.id;
+    activeEditorDebugJsOnly = parts.jsOnly;
+    htmlInput.value = parts.html;
+    cssInput.value = parts.css;
+    jsInput.value = parts.js;
+    editorUndoHistory?.reset();
+    document.querySelectorAll("[data-editor-template]").forEach((button) => button.classList.remove("active"));
+    runEditorPreview();
+    editorTagSuggest?.close();
+    editorColorPicker?.close();
+    editorColorPicker?.sync();
+  };
+
+  const saveEditorDebugDraft = () => {
+    if (!activeEditorDebugId) return;
+    const htmlInput = getElement("htmlInput");
+    const cssInput = getElement("cssInput");
+    const jsInput = getElement("jsInput");
+    if (!htmlInput || !cssInput || !jsInput) return;
+    const previousAttempt = debugAttempts[activeEditorDebugId] || { analysis: "", submitted: false };
+    const code = activeEditorDebugJsOnly
+      ? jsInput.value
+      : [
+          htmlInput.value.trim(),
+          cssInput.value.trim() ? `<style>\n${cssInput.value.trim()}\n</style>` : "",
+          jsInput.value.trim() ? `<script>\n${jsInput.value.trim()}\n</script>` : ""
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+    debugAttempts[activeEditorDebugId] = {
+      analysis: previousAttempt.analysis || "",
+      code,
+      submitted: previousAttempt.submitted === true
+    };
+    saveDebugAttempts();
+  };
+
   const setEditorTemplate = (id) => {
     const template = data.editorTemplates.find((item) => item.id === id) || data.editorTemplates[0];
     const htmlInput = getElement("htmlInput");
     const cssInput = getElement("cssInput");
     const jsInput = getElement("jsInput");
     if (!htmlInput || !cssInput || !jsInput) return;
+    activeEditorDebugId = "";
+    activeEditorDebugJsOnly = false;
     htmlInput.value = template.html;
     cssInput.value = template.css;
     jsInput.value = template.js || "";
@@ -1940,6 +2162,7 @@ window.JSLabApp = (() => {
     const jsInput = getElement("jsInput");
     const templateButtons = getElement("templateButtons");
     if (!htmlInput || !cssInput || !jsInput || !templateButtons) return;
+    const debugChallenge = getEditorDebugChallenge();
 
     templateButtons.innerHTML = data.editorTemplates
       .map(
@@ -1960,12 +2183,27 @@ window.JSLabApp = (() => {
     editorColorPicker = initCssColorPicker(cssInput, runEditorPreview);
     editorUndoHistory = initEditorUndoHistory([htmlInput, cssInput, jsInput], runEditorPreview);
     initEditorTabBehavior([htmlInput, cssInput, jsInput], runEditorPreview);
-    setEditorTemplate(data.editorTemplates[0].id);
-    htmlInput.addEventListener("input", debouncedPreview);
-    cssInput.addEventListener("input", debouncedPreview);
-    jsInput.addEventListener("input", debouncedPreview);
+
+    if (debugChallenge) setEditorDebugChallenge(debugChallenge.id);
+    else setEditorTemplate(data.editorTemplates[0].id);
+
+    htmlInput.addEventListener("input", () => {
+      debouncedPreview();
+      saveEditorDebugDraft();
+    });
+    cssInput.addEventListener("input", () => {
+      debouncedPreview();
+      saveEditorDebugDraft();
+    });
+    jsInput.addEventListener("input", () => {
+      debouncedPreview();
+      saveEditorDebugDraft();
+    });
     getElement("runPreview")?.addEventListener("click", runEditorPreview);
-    getElement("resetEditor")?.addEventListener("click", () => setEditorTemplate(data.editorTemplates[0].id));
+    getElement("resetEditor")?.addEventListener("click", () => {
+      if (activeEditorDebugId) setEditorDebugChallenge(activeEditorDebugId);
+      else setEditorTemplate(data.editorTemplates[0].id);
+    });
     getElement("copyEditor")?.addEventListener("click", () => {
       const source = `${htmlInput.value}\n\n<style>\n${cssInput.value}\n</style>\n\n<script>\n${jsInput.value}\n</script>`;
       copyText(source)
@@ -2073,13 +2311,22 @@ window.JSLabApp = (() => {
       return;
     }
 
+    const saveRecallButton = event.target.closest("[data-save-recall]");
+    if (saveRecallButton) {
+      const saved = saveActiveRecallAnswer(saveRecallButton.dataset.saveRecall);
+      showToast(saved ? "Jawaban recall tersimpan." : "Jawaban recall belum dapat disimpan.");
+      return;
+    }
+
     if (event.target.closest("[data-show-recall-answer]")) {
+      saveActiveRecallAnswer(activeRecallId);
       getElement("recallAnswer")?.classList.remove("d-none");
       return;
     }
 
     const completeRecallButton = event.target.closest("[data-complete-recall]");
     if (completeRecallButton) {
+      saveActiveRecallAnswer(completeRecallButton.dataset.completeRecall);
       const result = progress.markRecall(completeRecallButton.dataset.completeRecall);
       renderRecallChallenge(completeRecallButton.dataset.completeRecall);
       updateProgress();
@@ -2099,6 +2346,22 @@ window.JSLabApp = (() => {
       return;
     }
 
+    if (event.target.closest("[data-run-debug-preview]")) {
+      runDebugAnswerPreview();
+      return;
+    }
+
+    const resetDebugCodeButton = event.target.closest("[data-reset-debug-code]");
+    if (resetDebugCodeButton) {
+      const item = data.debugChallenges.find((challenge) => challenge.id === resetDebugCodeButton.dataset.resetDebugCode);
+      const codeInput = getElement("debugCode");
+      if (!item || !codeInput) return;
+      codeInput.value = item.brokenCode;
+      codeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      codeInput.focus();
+      return;
+    }
+
     const completeDebugButton = event.target.closest("[data-complete-debug]");
     if (completeDebugButton) {
       const result = progress.markDebug(completeDebugButton.dataset.completeDebug);
@@ -2106,6 +2369,7 @@ window.JSLabApp = (() => {
       updateProgress();
       showToast(result.added ? "Debugging challenge ditandai selesai." : "Kasus debugging ini sudah pernah diselesaikan.");
       showBadgeToasts(result.unlocked);
+      return;
     }
   };
 
@@ -2134,12 +2398,19 @@ window.JSLabApp = (() => {
     }
     const id = debugForm.dataset.debugForm;
     debugAttempts[id] = { analysis, code, submitted: true };
+    saveDebugAttempts();
     renderDebuggingChallenge(id);
     getElement("debugAnswer")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     showToast("Jawaban terkirim. Silakan pelajari pembahasannya.");
   };
 
   const handleInput = (event) => {
+    const recallInput = event.target.closest("[data-recall-answer]");
+    if (recallInput) {
+      setRecallChallengeAnswer(recallInput.dataset.recallAnswer, recallInput.value);
+      return;
+    }
+
     const debugForm = event.target.closest("[data-debug-form]");
     if (!debugForm) return;
     const id = debugForm.dataset.debugForm;
@@ -2149,6 +2420,8 @@ window.JSLabApp = (() => {
       code: debugForm.elements.code.value,
       submitted: previousAttempt.submitted
     };
+    saveDebugAttempts();
+    if (event.target.id === "debugCode") runDebugAnswerPreview();
   };
 
   const handleHashLesson = () => {

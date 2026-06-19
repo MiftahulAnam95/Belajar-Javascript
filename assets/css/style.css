@@ -1801,6 +1801,41 @@ p {
   padding: 0.28rem 0.55rem;
 }
 
+.debug-editor-grid {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+}
+
+.debug-editor-wrap {
+  background: #111827;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.debug-code-input.code-input {
+  min-height: 260px;
+}
+
+.debug-preview-shell {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.debug-preview-frame {
+  background: #fff;
+  border: 0;
+  display: block;
+  min-height: 260px;
+  width: 100%;
+}
+
 .debug-navigation {
   align-items: center;
   display: flex;
@@ -2875,6 +2910,10 @@ body.dark-mode .btn-close {
     grid-template-columns: 1fr;
   }
 
+  .debug-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3137,6 +3176,11 @@ body.dark-mode .btn-close {
 
   .code-input {
     min-height: 260px;
+  }
+
+  .debug-code-input.code-input,
+  .debug-preview-frame {
+    min-height: 220px;
   }
 
   .editor-color-popover {
